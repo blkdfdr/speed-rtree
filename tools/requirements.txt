@@ -1,0 +1,4 @@
+frozenlist==1.7.0
+osmium==4.0.2
+requests==2.32.4
+tqdm==4.67.1
