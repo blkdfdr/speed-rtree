@@ -1,6 +1,6 @@
-import osmium
-import json
+import osmium_helper
 import requests
+from schema import Schema
 from tqdm import tqdm
 import os
 
@@ -20,42 +20,26 @@ def download_osm_pbf(url, output_path):
                     f.write(chunk)
                     pbar.update(len(chunk))
 
-# Osmium handler to extract roads with maxspeed
-class SpeedHandler(osmium.SimpleHandler):
-    def __init__(self):
-        super().__init__()
-        self.roads = []
 
-    def way(self, w):
-        if "highway" in w.tags and "maxspeed" in w.tags:
-            coords = []
-            try:
-                for n in w.nodes:
-                    coords.append([n.lon, n.lat])
-            except Exception:
-                return
-            self.roads.append({
-                "id": w.id,
-                "maxspeed": w.tags["maxspeed"],
-                "geometry": coords
-            })
+
 
 # Main script
 if __name__ == "__main__":
     PBF_URL = "https://download.geofabrik.de/europe/germany-latest.osm.pbf"
-    PBF_FILE = "germany-latest.osm.pbf"
+    PBF_FILE =  "germany-latest.osm.pbf"
     OUTPUT_JSON = "germany_maxspeed.json"
 
     download_osm_pbf(PBF_URL, PBF_FILE)
 
+    PBF_FILE = "munich-latest.osm.pbf"
+
     print("Parsing PBF...")
-    handler = SpeedHandler()
-    handler.apply_file(PBF_FILE, locations=True)
+    handler = osmium_helper.SpeedHandler()
+    handler.apply_file_hardcore(PBF_FILE)
 
     print(f"Extracted {len(handler.roads)} roads with maxspeed.")
-
-    print(f"Writing to {OUTPUT_JSON}...")
-    with open(OUTPUT_JSON, "w", encoding="utf-8") as f:
-        json.dump(handler.roads, f, ensure_ascii=False, indent=2)
+    db = Schema()
+    db.setup_tables()
+    db.insert_roads(handler.roads)
 
     print("Done.")
